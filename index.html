@@ -45,7 +45,9 @@
     <input type="number" id="lastHourCount" placeholder="Last Hour Count" class="input-cell">
     <input type="number" id="recentHourCount" placeholder="Recent Hour Count" class="input-cell">
     <button class="button" onclick="recordCount()">Record Count</button>
+
     <button class="button" onclick="exportToExcel()">Export to Excel</button>
+    <button class="button" onclick="openGoogleSheet()">Open Google Sheet</button>
 
     <table id="dataTable">
         <thead>
@@ -70,6 +72,7 @@
         const targetPerHour = 275;
         let breakStartTime = null;
         const agentData = {}; // Tracks data per agent
+        const googleScriptURL = "https://script.google.com/macros/s/AKfycbwNNeuN-GfpHmLdbBM7aAWTxgnG4wI7PwfkXlchnpk5TXIdiH-c8-K5mGdQqYG8744yZQ/exec"; // Your Google Apps Script Web App URL
 
         function startBreak() {
             if (!document.getElementById("agentID").value) {
@@ -110,8 +113,33 @@
             // Update agent data
             agentData[agentID] = { lastHourCount: recentHourCount }; // Store the recent hour count as last hour for next entry
 
+            // Send data to Google Sheets
+            sendToGoogleSheet(agentID, lastHourCount, recentHourCount, taskDifference, deficit);
+
             // Update the table
             recordData(null, lastHourCount, recentHourCount, taskDifference, deficit > 0 ? deficit : 0);
+        }
+
+        function sendToGoogleSheet(agentID, lastHourCount, recentHourCount, taskDifference, deficit) {
+            const data = {
+                agentID,
+                lastHourCount,
+                recentHourCount,
+                taskDifference,
+                breakDuration: 'N/A', // Can be added if break is tracked
+                deficit
+            };
+
+            fetch(googleScriptURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => console.log("Data recorded in Google Sheet:", result))
+            .catch(error => console.error("Error recording data:", error));
         }
 
         function recordData(breakDuration = null, lastHourCount = 0, recentHourCount = 0, taskDifference = 0, deficit = 0) {
@@ -135,9 +163,18 @@
         function exportToExcel() {
             const table = document.getElementById("dataTable");
             const workbook = XLSX.utils.table_to_book(table, {sheet: "Agent Data"});
-            XLSX.writeFile(workbook, "Agent_Performance_Data.xlsx");
+            const fileName = "Agent_Performance_Data.xlsx";
+
+            // Create a download link and trigger it
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(new Blob([XLSX.write(workbook, {bookType: 'xlsx', bookSST: true, type: 'binary'})], { type: 'application/octet-stream' }));
+            downloadLink.download = fileName;
+            downloadLink.click();
+        }
+
+        function openGoogleSheet() {
+            window.open("https://docs.google.com/spreadsheets/d/1AigAwdqXpZnebfdqG4qLBm0Zfr9RALoA8qv_SbL1Fec/edit", "_blank");
         }
     </script>
-
 </body>
 </html>
