@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Performance Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 90%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #ffa500;
+            color: white;
+        }
+        .button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .input-cell {
+            width: 100px;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Agent Performance Tracker</h1>
+
+    <input type="text" id="agentID" placeholder="Enter Agent ID">
+    <button class="button" onclick="startBreak()">Start Break</button>
+    <button class="button" onclick="endBreak()">End Break</button>
+    <input type="number" id="lastHourCount" placeholder="Last Hour Count" class="input-cell">
+    <input type="number" id="recentHourCount" placeholder="Recent Hour Count" class="input-cell">
+    <button class="button" onclick="recordCount()">Record Count</button>
+    <button class="button" onclick="exportToExcel()">Export to Excel</button>
+
+    <table id="dataTable">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Agent ID</th>
+                <th>Last Hour Count</th>
+                <th>Recent Hour Count</th>
+                <th>Tasks Difference</th>
+                <th>Break Duration (min)</th>
+                <th>Deficit</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <!-- Include SheetJS library for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+
+    <script>
+        const targetPerHour = 275;
+        let breakStartTime = null;
+        const agentData = {}; // Tracks data per agent
+
+        function startBreak() {
+            if (!document.getElementById("agentID").value) {
+                alert("Please enter Agent ID before starting a break.");
+                return;
+            }
+            breakStartTime = new Date();
+            alert("Break started.");
+        }
+
+        function endBreak() {
+            if (!breakStartTime) {
+                alert("No break has started.");
+                return;
+            }
+            const breakEndTime = new Date();
+            const breakDuration = ((breakEndTime - breakStartTime) / 1000 / 60).toFixed(2); // in minutes
+            breakStartTime = null;
+
+            recordData(breakDuration);
+            alert(`Break ended. Duration: ${breakDuration} minutes.`);
+        }
+
+        function recordCount() {
+            const agentID = document.getElementById("agentID").value;
+            const lastHourCount = parseInt(document.getElementById("lastHourCount").value, 10) || 0;
+            const recentHourCount = parseInt(document.getElementById("recentHourCount").value, 10) || 0;
+
+            if (!agentID) {
+                alert("Please enter Agent ID.");
+                return;
+            }
+
+            // Calculate tasks difference and deficit
+            const taskDifference = recentHourCount - lastHourCount;
+            const deficit = targetPerHour - taskDifference;
+
+            // Update agent data
+            agentData[agentID] = { lastHourCount: recentHourCount }; // Store the recent hour count as last hour for next entry
+
+            // Update the table
+            recordData(null, lastHourCount, recentHourCount, taskDifference, deficit > 0 ? deficit : 0);
+        }
+
+        function recordData(breakDuration = null, lastHourCount = 0, recentHourCount = 0, taskDifference = 0, deficit = 0) {
+            const agentID = document.getElementById("agentID").value;
+            const tableBody = document.getElementById("dataTable").querySelector("tbody");
+            const row = tableBody.insertRow();
+
+            // Current time
+            const currentTime = new Date();
+            const formattedTime = currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            row.insertCell(0).textContent = formattedTime;
+            row.insertCell(1).textContent = agentID;
+            row.insertCell(2).textContent = lastHourCount;
+            row.insertCell(3).textContent = recentHourCount;
+            row.insertCell(4).textContent = taskDifference;
+            row.insertCell(5).textContent = breakDuration || 'N/A';
+            row.insertCell(6).textContent = deficit || 'N/A';
+        }
+
+        function exportToExcel() {
+            const table = document.getElementById("dataTable");
+            const workbook = XLSX.utils.table_to_book(table, {sheet: "Agent Data"});
+            XLSX.writeFile(workbook, "Agent_Performance_Data.xlsx");
+        }
+    </script>
+
+</body>
+</html>
