@@ -98,11 +98,15 @@
 
         function recordCount() {
             const agentID = document.getElementById("agentID").value;
-            const lastHourCount = parseInt(document.getElementById("lastHourCount").value, 10) || 0;
-            const recentHourCount = parseInt(document.getElementById("recentHourCount").value, 10) || 0;
+            const lastHourCount = parseInt(document.getElementById("lastHourCount").value, 10);
+            const recentHourCount = parseInt(document.getElementById("recentHourCount").value, 10);
 
             if (!agentID) {
                 alert("Please enter Agent ID.");
+                return;
+            }
+            if (isNaN(lastHourCount) || isNaN(recentHourCount)) {
+                alert("Please enter valid numeric values for last and recent hour counts.");
                 return;
             }
 
